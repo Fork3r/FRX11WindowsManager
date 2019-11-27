@@ -5,12 +5,12 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(header
         ${header}
-        #${FR_X11_WINDOWS_MANAGER_PATH}/renderer.h
+        ${FR_X11_WINDOWS_MANAGER_PATH}/window.h
         )
 
 set(src
         ${src}
-        #${FR_X11_WINDOWS_MANAGER_PATH}/renderer.cpp
+        ${FR_X11_WINDOWS_MANAGER_PATH}/window.cpp
         )
 
 set(libraries
