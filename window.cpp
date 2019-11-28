@@ -2,67 +2,79 @@
 // Created by rsalogub on 27.11.19.
 //
 
-#include<stdio.h>
-#include<stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
 #include "window.h"
 
 namespace FRX11Windows
 {
-    using namespace X11Internals;
-    Window::Window(int width, int height, const std::string &windowTitle)
-    {
-        display_ = XOpenDisplay(NULL);
+    X11Internals::Display* Display::display_ = nullptr;
 
-        if(display_ == NULL) {
+    X11Internals::Display* Display::getDisplay()
+    {
+        if (!display_) {
+            display_ = X11Internals::XOpenDisplay(nullptr);
+        }
+
+        if (display_ == nullptr) {
             printf("\n\tcannot connect to X server\n\n");
             exit(0);
         }
+        return display_;
+    }
 
-        root_ = DefaultRootWindow(display_);
+    using namespace X11Internals;
 
-        vi_ = glXChooseVisual(display_, 0, att);
+    Window::Window(int width, int height, const std::string &windowTitle)
+    {
+        int screenId = DefaultScreen(Display::getDisplay());
 
-        if(vi_ == NULL) {
-            printf("\n\tno appropriate visual found\n\n");
-            exit(0);
-        }
-        else {
-            printf("\n\tvisual %p selected\n", (void *)vi_->visualid); /* %p creates hexadecimal output like in glxinfo */
-        }
+        windowId_ = XCreateWindow(Display::getDisplay(), DefaultRootWindow(Display::getDisplay()), 0, 0, width,
+                                height, 0, CopyFromParent, CopyFromParent,
+                                CopyFromParent, 0, nullptr);
 
+        std::cout << __func__ << " " << windowId_ << std::flush;
 
-        cmap_ = XCreateColormap(display_, root_, vi_->visual, AllocNone);
-
-        swa_.colormap = cmap_;
-        swa_.event_mask = ExposureMask | KeyPressMask;
-
-        win_ = XCreateWindow(display_, root_, 0, 0, width, height, 0, vi_->depth, InputOutput, vi_->visual, CWColormap | CWEventMask, &swa_);
-
-        XMapWindow(display_, win_);
         if (!windowTitle.empty()) {
-            XStoreName(display_, win_, windowTitle.c_str());
+            XStoreName(Display::getDisplay(), windowId_, windowTitle.c_str());
         }
 
-        glc_ = glXCreateContext(display_, vi_, NULL, GL_TRUE);
-        glXMakeCurrent(display_, win_, glc_);
+        // Show the window
+        XSelectInput(Display::getDisplay(), windowId_, StructureNotifyMask | ButtonPressMask | KeyPressMask | KeyReleaseMask);
+        XMapWindow(Display::getDisplay(), windowId_);
+        while (true) {
+            XEvent e;
+            XNextEvent(Display::getDisplay(), &e);
+            if (e.type == MapNotify)
+                break;
+        }
+        while (true) {
+            XEvent e;
+            XNextEvent(Display::getDisplay(), &e);
+            if (e.type == ButtonPress)
+                break;
+        }
+    }
 
-        glEnable(GL_DEPTH_TEST);
+    Window::~Window()
+    {
+        std::cout << __func__ << " " << windowId_ << std::flush;
+        XDestroyWindow(Display::getDisplay(), windowId_);
+    }
 
-        while(1) {
-            XNextEvent(display_, &xev_);
+    void Window::resize(unsigned int width, unsigned int height)
+    {
+        XResizeWindow(Display::getDisplay(), windowId_, width, height);
+    }
 
-            if(xev_.type == Expose) {
-                XGetWindowAttributes(display_, win_, &gwa_);
-                glViewport(0, 0, gwa_.width, gwa_.height);
-                glXSwapBuffers(display_, win_);
-            }
-
-            else if(xev_.type == KeyPress) {
-                glXMakeCurrent(display_, None, NULL);
-                glXDestroyContext(display_, glc_);
-                XDestroyWindow(display_, win_);
-                XCloseDisplay(display_);
-                exit(0);
+    void EventHandler::processEvents()
+    {
+        XEvent event;
+        while(XPending(Display::getDisplay())) {
+            XNextEvent(Display::getDisplay(), &event);
+            if (event.type == KeyPress) {
+                std::cout << XkbKeycodeToKeysym(Display::getDisplay(), event.xkey.keycode, 0, 0) << "::" << XK_F1 << std::endl << std::flush;
             }
         }
     }

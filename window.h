@@ -9,30 +9,40 @@
 
 namespace X11Internals
 {
-
-#include<GL/glx.h>
-#include<X11/X.h>
-#include<X11/Xlib.h>
+#include<X11/XKBlib.h>
+#include<X11/keysym.h>
+#include<X11/keysymdef.h>
 
 }
 
 namespace FRX11Windows
 {
+    class Display
+    {
+    public:
+        static X11Internals::Display* getDisplay();
+    private:
+        static X11Internals::Display* display_;
+    };
+
+    class EventHandler
+    {
+    public:
+        static void processEvents();
+
+        // TODO:
+        // subscribing on events
+    };
+
     class Window
     {
     public:
         Window(int width, int height, const std::string &windowTitle = "");
+        ~Window();
+
+        void resize(unsigned int width, unsigned int height);
     private:
-        int att[5] = {GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None};
-        X11Internals::Display *display_;
-        X11Internals::Window root_;
-        X11Internals::XVisualInfo *vi_;
-        X11Internals::Colormap cmap_;
-        X11Internals::XSetWindowAttributes swa_;
-        X11Internals::Window win_;
-        X11Internals::GLXContext glc_;
-        X11Internals::XWindowAttributes gwa_;
-        X11Internals::XEvent xev_;
+        X11Internals::Window windowId_;
     };
 }
 
